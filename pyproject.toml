@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "plotly>=5.24.1",
     "shiny>=1.1.0",
     "shinywidgets>=0.3.4",
 ]
