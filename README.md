@@ -10,7 +10,8 @@
 ```bash
 $ git clone https://github.com/kjst-edu/24_Economy
 $ cd 24_Economy
-
+$ uv sync
+$ uv run -- shiny run
 ```
 ## 詳細
 ### 株価グラフ
