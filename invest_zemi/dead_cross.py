@@ -63,3 +63,8 @@ while True:
 
     # 15分ごとにチェック（900秒）
     time.sleep(900)
+
+
+
+
+print("aaa")
