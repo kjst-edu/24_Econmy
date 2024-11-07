@@ -5,6 +5,8 @@ build/
 dist/
 wheels/
 *.egg-info
+*.zip
+ignored_folder/*
 
 # Virtual environments
 .venv
