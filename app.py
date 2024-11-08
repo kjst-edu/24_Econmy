@@ -17,6 +17,8 @@ import math
 import urllib.request
 import glob
 
+#api_key : 5c09c7cab09f4d98b34aa3f247f7e36d
+
 
 #株価の表示
 
