@@ -15,10 +15,15 @@ $ uv run -- shiny run
 ```
 ## 詳細
 ### 株価グラフ
-- 銘柄（銘柄コード）
-- API_Key（EDINET API仕様書 https://time2log.com/wp-content/uploads/2024/08/11_EDINET_API%E4%BB%95%E6%A7%98%E6%9B%B8%EF%BC%88version-2%EF%BC%89.pdf を参考に発行してください）
-- 表示期間（開始日と終了日を入力）
-- 移動平均（日数を複数指定できる）
+- Stock Code : 日本株 銘柄コード4桁を入力してください
+- 表示期間 : Start Date（開始日）とEnd Date（終了日）を入力してください
+- Moving Average : 移動平均線（7日～100日）を選択してください
+
+
+### 財務諸表データのグラフ
+**※データの取得には時間がかかる場合があります**
+- API_KEY : EDINET API仕様書 https://time2log.com/wp-content/uploads/2024/08/11_EDINET_API%E4%BB%95%E6%A7%98%E6%9B%B8%EF%BC%88version-2%EF%BC%89.pdf を参考に発行してください
+- Data for Display : 表示したいデータを選んでください
 
 ### ゴールデンクロス・デッドクロス検出
 - 銘柄（銘柄コード）
