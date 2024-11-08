@@ -15,9 +15,9 @@ $ uv run -- shiny run
 ```
 ## 詳細
 ### 株価グラフ
-- 銘柄（Tickerコードまたは、銘柄コード）
+- 銘柄（銘柄コード）
+- API_Key（EDINET API仕様書 https://time2log.com/wp-content/uploads/2024/08/11_EDINET_API%E4%BB%95%E6%A7%98%E6%9B%B8%EF%BC%88version-2%EF%BC%89.pdf を参考に発行してください）
 - 表示期間（開始日と終了日を入力）
-- 表示データ（Close, Open, High, Low）
 - 移動平均（日数を複数指定できる）
 
 ### ゴールデンクロス・デッドクロス検出

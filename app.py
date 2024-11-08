@@ -40,11 +40,15 @@ def get_stock_price(ticker, moving_average, start, end=None):
 
     return return_df.set_index('Date')
 
+def last_year():
+    current_date = dt.today().date()
+    return current_date.replace(year=current_date.year-1)
+
 #サイドバーの表示
 with ui.sidebar():
     ui.input_text("ticker", "Enter Stock Code", "0000")
-    ui.input_date("start", "Start Date")
-    ui.input_date("end", "End Date")
+    ui.input_date("start", "Start Date", min='1970-01-01', max=dt.today().date())
+    ui.input_date("end", "End Date", value=last_year(), min='1970-01-01', max=dt.today().date())
     ui.input_checkbox_group(
         "moving_average", "Moving Average",
         choices=[7, 10, 20, 30, 50, 100],
