@@ -25,8 +25,8 @@ def get_stock_price(ticker, moving_average, start, end=None):
     if end is None:
         end = dt.today()
 
-    start_date = dt.strptime(start, '%Y-%m-%d').date()
-    end_date = dt.strptime(end, '%Y-%m-%d').date()
+    start_date = start
+    end_date = end
     start_date_100_days_ago = start_date - timedelta(days=150)
     return_df = yf.download(ticker, start=start_date_100_days_ago, end=end_date)
     return_df = return_df.stack(future_stack=True).reset_index()
@@ -40,9 +40,9 @@ def get_stock_price(ticker, moving_average, start, end=None):
 
 #サイドバーの表示
 with ui.sidebar():
-    ui.input_text("ticker", "Enter ticker", "4902")
-    ui.input_text("start", "Start Date", "2023-07-01")
-    ui.input_text("end", "End Date", "2024-07-31")
+    ui.input_text("ticker", "Enter ticker", "0000")
+    ui.input_date("start", "Start Date")
+    ui.input_date("end", "End Date")
     ui.input_checkbox_group(
         "moving_average", "Moving Average",
         choices=[7, 10, 20, 30, 50, 100],
@@ -85,8 +85,8 @@ def figpath():
     import tempfile
     fd, path = tempfile.mkstemp(suffix = '.svg')
 
-    start = dt.strptime(input.start(), '%Y-%m-%d').date()
-    end = dt.strptime(input.end(), '%Y-%m-%d').date()
+    start = input.start()
+    end = input.end()
     data = df()
 
     data_for_display = data[(data.index.date>start) & (data.index.date<end)].drop('Ticker', axis=1)
@@ -184,19 +184,18 @@ def get_nearest_quarter_end(current_date):
     month = current_date.month
 
     # 四半期末日を設定
-    if month <= 3:
-        # 3月以下は前年の12月31日
+    if month <= 5:
         return current_date.replace(year=current_date.year - 1, month=12, day=31)
-    elif month <= 6:
-        return current_date.replace(month=3, day=31)  # 4月～6月は3月末
-    elif month <= 9:
-        return current_date.replace(month=6, day=30)  # 7月～9月は6月末
     else:
-        return current_date.replace(month=9, day=30)  # 10月～12月は9月末
+        return current_date.replace(month=6, day=30)
+
 
 def search_docID(code, api_key):
     api_key = str(api_key)
-    flag = True
+    if len(code) >= 4:
+        flag = True
+    else:
+        flag = False
     current_date = dt.today().date()
     date = get_nearest_quarter_end(current_date)
     days = 0
@@ -223,7 +222,7 @@ def search_docID(code, api_key):
             date -= timedelta(days=1)
 
         days += 1
-        if days > 730:
+        if days > 365:
             break
     return docID
 
@@ -388,4 +387,3 @@ with ui.card(full_screen=True):
         return {"src": str(figpath2()), 
                 "width": "800px", "format":"svg"}
 
-# サーチ開始日を6月末にする？、日付などの入力方法の改善、responseのステータスコードの確認（日付とapi_keyがあっていれば200?、それ以外の時にbreak）
