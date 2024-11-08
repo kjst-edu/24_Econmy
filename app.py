@@ -42,7 +42,7 @@ def get_stock_price(ticker, moving_average, start, end=None):
 
 #サイドバーの表示
 with ui.sidebar():
-    ui.input_text("ticker", "Enter ticker", "0000")
+    ui.input_text("ticker", "Enter Stock Code", "0000")
     ui.input_date("start", "Start Date")
     ui.input_date("end", "End Date")
     ui.input_checkbox_group(
