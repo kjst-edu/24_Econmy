@@ -46,7 +46,7 @@ def last_year():
 
 #サイドバーの表示
 with ui.sidebar():
-    ui.input_text("ticker", "Enter Stock Code", "0000")
+    ui.input_text("ticker", "Enter Stock Code", placeholder="0000")
     ui.input_date("start", "Start Date", value=last_year(), min='1970-01-01', max=dt.today().date())
     ui.input_date("end", "End Date", value = dt.today().date(), min='1970-01-01', max=dt.today().date())
     ui.input_checkbox_group(
@@ -55,7 +55,8 @@ with ui.sidebar():
         selected=[7],
         inline=True)
 
-    ui.input_text("api_key", "API KEY", "Enter EDINET API code")
+    ui.input_password("api_key", "API KEY", placeholder="Enter EDINET API KEY")
+    ui.input_action_button('start_search', 'Start to Search Documents')
     ui.input_checkbox_group(
         "cols", "Data for Display",
         choices=['売上高','経常利益', '純資産額', '総資産額', 
@@ -335,13 +336,21 @@ def get_financialstatement(code, api_key):
         
         return data
 
-@reactive.calc
-def get_data():
-    return get_financialstatement(input.ticker(), input.api_key())
+data_cache = reactive.cache()
 
-@reactive.calc
+@reactive.event(input.start_search)
+def get_data():
+    # キャッシュにデータがない場合のみ取得する
+    if "data" not in data_cache or data_cache["ticker"] != input.ticker():
+        data_cache["data"] = get_financialstatement(input.ticker(), input.api_key())
+        data_cache["ticker"] = input.ticker()  # 銘柄コードをキャッシュに保存
+    return data_cache["data"]
+
+@reactive.event(input.start_search)
 def fs_df():
-    return make_data_for_display(list(input.cols()), get_data())
+    if "fs_df" not in data_cache:
+        data_cache["fs_df"] = make_data_for_display(list(input.cols()), get_data())
+    return data_cache["fs_df"]
 
 @reactive.calc
 def figpath2():
