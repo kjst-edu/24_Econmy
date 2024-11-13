@@ -56,7 +56,7 @@ with ui.sidebar():
         inline=True)
 
     ui.input_password("api_key", "API KEY", placeholder="Enter EDINET API KEY")
-    ui.input_action_button('start_search', 'Start to Search Documents')
+    ui.input_action_button('start_search', 'Search Documents')
     ui.input_checkbox_group(
         "cols", "Data for Display",
         choices=['売上高','経常利益', '純資産額', '総資産額', 
@@ -336,21 +336,19 @@ def get_financialstatement(code, api_key):
         
         return data
 
-data_cache = reactive.cache()
+data = reactive.value(pd.DataFrame())
 
+@reactive.effect
 @reactive.event(input.start_search)
-def get_data():
-    # キャッシュにデータがない場合のみ取得する
-    if "data" not in data_cache or data_cache["ticker"] != input.ticker():
-        data_cache["data"] = get_financialstatement(input.ticker(), input.api_key())
-        data_cache["ticker"] = input.ticker()  # 銘柄コードをキャッシュに保存
-    return data_cache["data"]
+def _():
+    data.set(get_financialstatement(input.ticker(), input.api_key()))
 
-@reactive.event(input.start_search)
+
+@reactive.calc
 def fs_df():
-    if "fs_df" not in data_cache:
-        data_cache["fs_df"] = make_data_for_display(list(input.cols()), get_data())
-    return data_cache["fs_df"]
+    return make_data_for_display(list(input.cols()), data())
+
+
 
 @reactive.calc
 def figpath2():
