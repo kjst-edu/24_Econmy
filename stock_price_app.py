@@ -57,18 +57,7 @@ def stock_price(input, output, session):
             selected=[7],
             inline=True)
 
-        ui.input_password("api_key", "API KEY", placeholder="Enter EDINET API KEY")
-        ui.input_action_button('start_search', 'Search Documents')
-        ui.input_checkbox_group(
-            "cols", "Data for Display",
-            choices=['売上高','経常利益', '純資産額', '総資産額', 
-            '１株当たり純資産額', '１株当たり配当額', '自己資本比率', 
-            '自己資本利益率', '株価収益率', 
-            '営業活動によるキャッシュ・フロー', '投資活動によるキャッシュ・フロー',
-            '財務活動によるキャッシュ・フロー', '従業員数'],
-            selected=['売上高'],
-            inline=True
-            )
+
 
 
     @reactive.calc
