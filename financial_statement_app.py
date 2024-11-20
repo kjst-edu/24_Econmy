@@ -1,0 +1,299 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+from datetime import datetime as dt, timedelta
+import yfinance as yf
+import mplfinance as mpf
+from shiny import reactive, render
+from shiny.express import input, ui, module
+import csv
+import requests
+import shutil
+import os
+import zipfile
+import sys
+import math
+import urllib.request
+import glob
+
+
+
+
+@module
+def fin_statement(input, output, session):
+    def get_edinet_code(code):
+        with open('invest_zemi\EdinetcodeDlInfo.csv') as f:
+            reader= csv.reader(f)
+            #先頭行をスキップする
+            next(reader)
+            # 2行目以を項目行する
+            col = next(reader)
+            # 3行目以降をデータとする
+            # rowは1行づつの配列となる。内包表記でまとめる
+            data = [row for row in reader]
+        
+        edinet_codelist = pd.DataFrame(data, columns=col)
+        return edinet_codelist[edinet_codelist['証券コード'] == f'{code}0']['ＥＤＩＮＥＴコード'].values[0]
+
+    def get_docID(code, date, api_key):
+        api_key = str(api_key)
+        if (api_key == "Enter EDINET API code") or (api_key is None):
+            return 0
+        else:
+            # APIエンドポイント
+            api_url = 'https://disclosure.edinet-fsa.go.jp/api/v2/documents.json'
+
+            # パラメータ（例: 企業コードや提出日）
+            params = {
+                'date': date,  # 提出日
+                'type': 2,             # 提出書類の種類（有価証券報告書など）
+                "Subscription-Key":str(api_key)
+            }
+
+            # APIリクエスト
+            response = requests.get(api_url, params=params)
+
+            # レスポンスの確認
+            if response.status_code == 200:
+                data = response.json()
+            elif response.status_code == 401:
+                return 1
+            else:
+                print("Error:", response.status_code)
+                return None
+
+            # ドキュメント情報を抽出
+            documents = data['results']
+            if documents == []:
+                return None
+            
+            # 結果をDataFrameに変換
+            df = pd.DataFrame(documents)
+
+            # 特定のカラムだけを選択
+            df_filtered = df[['docID', 'edinetCode', 'filerName', 'docDescription']]
+
+            # 有価証券報告書のみにフィルタリング
+            df_financial = df_filtered[df_filtered['docDescription'].str.contains('有価証券報告書', na=False)]
+            
+            # EDINETコードを取得してフィルタリング
+            edinet_code = get_edinet_code(code)
+            docID_data = df_financial[df_financial['edinetCode'] == edinet_code]
+                
+            # docIDを返す
+            return docID_data['docID'].values[0]
+
+    def get_nearest_quarter_end(current_date):
+        # 現在の月を取得
+        month = current_date.month
+
+        # 四半期末日を設定
+        if month <= 5:
+            return current_date.replace(year=current_date.year - 1, month=12, day=31)
+        else:
+            return current_date.replace(month=6, day=30)
+
+
+    def search_docID(code, api_key):
+        api_key = str(api_key)
+        if len(code) >= 4:
+            flag = True
+        else:
+            flag = False
+        current_date = dt.today().date()
+        date = get_nearest_quarter_end(current_date)
+        days = 0
+
+        while flag:
+            print(date)
+            try:
+                docID = get_docID(code, str(date), api_key)
+                if docID is not None:
+                    flag = False
+                    print("取得したdocID:", docID)
+                
+                elif docID == 1:
+                    print('Please check the API code again')
+                    break
+                
+                elif docID == 0:
+                    print('Enter EDINET API code')
+                    break
+                else:
+                    # ドキュメントが見つからない場合、日付を1日前に戻す
+                    date -= timedelta(days=1)
+            except IndexError:
+                date -= timedelta(days=1)
+
+            days += 1
+            if days > 365:
+                break
+        return docID
+
+    def get_fs(docID, api_key):
+        api_key = str(api_key)
+        url = f'https://api.edinet-fsa.go.jp/api/v2/documents/{docID}?type=5&Subscription-Key={api_key}'
+        try:
+                # ZIPファイルのダウンロード
+            with urllib.request.urlopen(url) as res:
+                content = res.read()
+            output_path = os.path.join("invest_zemi\ignored_folder", f'{docID}.zip')
+            with open(output_path, 'wb') as file_out:
+                file_out.write(content)
+        except urllib.error.HTTPError as e:
+            if e.code >= 400:
+                sys.stderr.write(e.reason + '\n')
+            else:
+                raise e    
+        
+        # 解凍フォルダのパスを設定（.gitignoreで無視されるフォルダの中に保存）
+        output_dir = os.path.join("invest_zemi\ignored_folder", f"{docID}_extracted")
+
+        # 解凍処理
+        zip_path = os.path.join("invest_zemi\ignored_folder", f'{docID}.zip')
+        try:
+            # ZIP形式であり、ファイルサイズが0以上であるかチェック
+            if zipfile.is_zipfile(zip_path) and os.path.getsize(zip_path) > 0:
+                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                    # ファイル数を確認して空かどうかを判定
+                    if len(zip_ref.namelist()) > 0:
+                        os.makedirs(output_dir, exist_ok=True)  # 保存先フォルダが存在しない場合に作成
+                        zip_ref.extractall(output_dir)
+                        print(f"Extracted {zip_path} to {output_dir}")
+                    else:
+                        print(f"{zip_path} is an empty zip file.")
+            else:
+                print(f"{zip_path} is not a valid or empty zip file.")
+        except zipfile.BadZipFile:
+            print(f"{zip_path} is corrupted or not a valid zip file.")
+
+        # フォルダ内の'-asr-'が含まれるCSVファイルを検索
+        base_folder_path = r'invest_zemi\ignored_folder'
+
+        # パターンを指定してファイルパスを取得
+        folder_pattern = os.path.join(base_folder_path, '*_extracted', 'XBRL_TO_CSV', '*-asr-*.csv')
+        matching_folders = glob.glob(folder_pattern)
+        file = matching_folders[0]
+
+        # 見つかったCSVファイルを読み込む
+
+        try:
+            return_df = pd.read_csv(file, encoding='utf-16', sep='\t')
+            print(f"Loaded {file} successfully.")
+            # DataFrameの確認や処理が必要であればここに追加
+            # 例: print(df.head())など
+        except Exception as e:
+            print(f"Error loading {file}: {e}")
+        
+        return return_df
+
+    def delete_files():
+        extracted_folder = "invest_zemi\ignored_folder"
+
+        # フォルダ内の全データを削除
+        if os.path.exists(extracted_folder):
+            shutil.rmtree(extracted_folder)
+            os.makedirs(extracted_folder)  # 空のフォルダを再作成
+            print(f"Deleted all contents in: {extracted_folder}")
+        else:
+            print(f"{extracted_folder} does not exist.")
+
+    def convert_number(value):
+        # 数値に変換できるかを確認
+        try:
+            # 文字列が浮動小数点数として解釈されるか試す
+            num = float(value)
+            # 小数点以下があるかを確認し、適切な型に変換
+            if num.is_integer():
+                return int(num)  # 小数点以下が0ならintに変換
+            else:
+                return num  # 小数点以下があればfloatのまま
+        except ValueError:
+            # 数値に変換できない場合はそのまま返す
+            return value
+
+    def make_data_for_display(cols, df):
+        years = ['四期前', '三期前', '前々期', '前期', '当期']
+        data_for_display = pd.DataFrame({'相対年度':years}).reset_index(drop=True)
+
+        for col in cols:
+            data = [convert_number(x) for x in df[df['項目名'].str.contains(f'{col}', na=False)][:5]['値'].reset_index(drop=True)]
+            data_for_display[col] = data
+        
+        return data_for_display
+
+    def get_financialstatement(code, api_key):
+        if  (api_key == "Enter EDINET API code") or (api_key is None):
+            raise ValueError('There is a problem with the API code')
+        else:
+            api_key = str(api_key)
+            docID = search_docID(code, api_key)
+            data = get_fs(docID, api_key)
+            delete_files()
+            
+            return data
+
+    data = reactive.value(pd.DataFrame())
+
+    @reactive.effect
+    @reactive.event(input.start_search)
+    def _():
+        data.set(get_financialstatement(input.ticker(), input.api_key()))
+
+
+    @reactive.calc
+    def fs_df():
+        return make_data_for_display(list(input.cols()), data())
+
+
+
+    @reactive.calc
+    def figpath2():
+        import tempfile
+        fd, path = tempfile.mkstemp(suffix = '.svg')
+        data = fs_df()
+
+        remove_cols = data.columns[data.dtypes==object].tolist()
+        remove_cols.remove('相対年度')
+
+        r = math.ceil((len(data.columns)-1)/3)
+        import japanize_matplotlib
+        sns.set(font="IPAexGothic")
+        fig, axes = plt.subplots(r, 3, figsize=(12, r*3))
+        i, j = 0, 0
+        if r == 1:
+            for col in data.columns:
+                if col != '相対年度':
+                    sns.lineplot(data=data, x='相対年度', y=col, ax=axes[i])
+                    axes[i].set_title(f'{col}')
+                    axes[i].set_ylabel('')
+                    i += 1
+
+            plt.tight_layout()
+
+        else:
+            for col in data.columns:
+                if col != '相対年度':
+                    sns.lineplot(data=data, x='相対年度', y=col, ax=axes[j, i])
+                    axes[j, i].set_title(f'{col}')
+                    axes[j, i].set_ylabel('')
+                
+                    if i % 3 == 2:
+                        i = 0
+                        j += 1
+                    else:
+                        i += 1
+            plt.tight_layout()
+
+        fig.savefig(path)
+
+        return path
+
+
+    with ui.card(full_screen=True):
+        
+        @render.image
+        def image2():
+            return {"src": str(figpath2()), 
+                    "width": "800px", "format":"svg"}

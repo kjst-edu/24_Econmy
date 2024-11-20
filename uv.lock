@@ -881,6 +881,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pathlib"
+version = "1.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ac/aa/9b065a76b9af472437a0059f77e8f962fe350438b927cb80184c32f075eb/pathlib-1.0.1.tar.gz", hash = "sha256:6940718dfc3eff4258203ad5021090933e5c04707d5ca8cc9e73c94a7894ea9f", size = 49298 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/78/f9/690a8600b93c332de3ab4a344a4ac34f00c8f104917061f779db6a918ed6/pathlib-1.0.1-py3-none-any.whl", hash = "sha256:f35f95ab8b0f59e6d354090350b44a80a80635d22efdedfa84c7ad1cf0a74147", size = 14363 },
+]
+
+[[package]]
 name = "peewee"
 version = "3.17.7"
 source = { registry = "https://pypi.org/simple" }
@@ -1231,6 +1240,7 @@ dependencies = [
     { name = "japanize-matplotlib" },
     { name = "mplfinance" },
     { name = "pandas" },
+    { name = "pathlib" },
     { name = "plotly" },
     { name = "requests" },
     { name = "seaborn" },
@@ -1246,6 +1256,7 @@ requires-dist = [
     { name = "japanize-matplotlib", specifier = ">=1.1.3" },
     { name = "mplfinance", specifier = ">=0.12.10b0" },
     { name = "pandas", specifier = ">=2.2.3" },
+    { name = "pathlib", specifier = ">=1.0.1" },
     { name = "plotly", specifier = ">=5.24.1" },
     { name = "requests", specifier = ">=2.32.3" },
     { name = "seaborn", specifier = ">=0.13.2" },
