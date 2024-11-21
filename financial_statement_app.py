@@ -22,19 +22,6 @@ import glob
 
 @module
 def fin_statement(input, output, session):
-    with ui.sidebar():
-        ui.input_password("api_key", "API KEY", placeholder="Enter EDINET API KEY")
-        ui.input_action_button('start_search', 'Search Documents')
-        ui.input_checkbox_group(
-            "cols", "Data for Display",
-            choices=['売上高','経常利益', '純資産額', '総資産額', 
-            '１株当たり純資産額', '１株当たり配当額', '自己資本比率', 
-            '自己資本利益率', '株価収益率', 
-            '営業活動によるキャッシュ・フロー', '投資活動によるキャッシュ・フロー',
-            '財務活動によるキャッシュ・フロー', '従業員数'],
-            selected=['売上高'],
-            inline=True
-            )
 
     def get_edinet_code(code):
         with open('invest_zemi\EdinetcodeDlInfo.csv') as f:
@@ -112,95 +99,98 @@ def fin_statement(input, output, session):
     def search_docID(code, api_key):
         api_key = str(api_key)
         if len(code) >= 4:
-            flag = True
-        else:
-            flag = False
-        current_date = dt.today().date()
-        date = get_nearest_quarter_end(current_date)
-        days = 0
+            current_date = dt.today().date()
+            date = get_nearest_quarter_end(current_date)
+            days = 0
 
-        while flag:
-            print(date)
-            try:
-                docID = get_docID(code, str(date), api_key)
-                if docID is not None:
-                    flag = False
-                    print("取得したdocID:", docID)
-                
-                elif docID == 1:
-                    print('Please check the API code again')
-                    break
-                
-                elif docID == 0:
-                    print('Enter EDINET API code')
-                    break
-                else:
-                    # ドキュメントが見つからない場合、日付を1日前に戻す
+            while True:
+                print(date)
+                try:
+                    docID = get_docID(code, str(date), api_key)
+                    if docID is not None:
+                        print("取得したdocID:", docID)
+                        break
+                    
+                    elif docID == 1:
+                        print('Please check the API code again')
+                        break
+                    
+                    elif docID == 0:
+                        print('Enter EDINET API code')
+                        break
+                    else:
+                        # ドキュメントが見つからない場合、日付を1日前に戻す
+                        date -= timedelta(days=1)
+                except IndexError:
                     date -= timedelta(days=1)
-            except IndexError:
-                date -= timedelta(days=1)
 
-            days += 1
-            if days > 365:
-                break
-        return docID
+                days += 1
+                if days > 365:
+                    break
+            
+            return docID
+        else:
+            return 'Error'
 
     def get_fs(docID, api_key):
-        api_key = str(api_key)
-        url = f'https://api.edinet-fsa.go.jp/api/v2/documents/{docID}?type=5&Subscription-Key={api_key}'
-        try:
-                # ZIPファイルのダウンロード
-            with urllib.request.urlopen(url) as res:
-                content = res.read()
-            output_path = os.path.join("invest_zemi\ignored_folder", f'{docID}.zip')
-            with open(output_path, 'wb') as file_out:
-                file_out.write(content)
-        except urllib.error.HTTPError as e:
-            if e.code >= 400:
-                sys.stderr.write(e.reason + '\n')
-            else:
-                raise e    
-        
-        # 解凍フォルダのパスを設定（.gitignoreで無視されるフォルダの中に保存）
-        output_dir = os.path.join("invest_zemi\ignored_folder", f"{docID}_extracted")
+        if docID == 'Error':
+            return 'Error'
+        else:
+            api_key = str(api_key)
+            url = f'https://api.edinet-fsa.go.jp/api/v2/documents/{docID}?type=5&Subscription-Key={api_key}'
+            try:
+                    # ZIPファイルのダウンロード
+                with urllib.request.urlopen(url) as res:
+                    content = res.read()
+                output_path = os.path.join("invest_zemi\ignored_folder", f'{docID}.zip')
+                with open(output_path, 'wb') as file_out:
+                    file_out.write(content)
+            except urllib.error.HTTPError as e:
+                if e.code >= 400:
+                    sys.stderr.write(e.reason + '\n')
+                else:
+                    raise e    
+            
+            # 解凍フォルダのパスを設定（.gitignoreで無視されるフォルダの中に保存）
+            output_dir = os.path.join("invest_zemi\ignored_folder", f"{docID}_extracted")
 
-        # 解凍処理
-        zip_path = os.path.join("invest_zemi\ignored_folder", f'{docID}.zip')
-        try:
-            # ZIP形式であり、ファイルサイズが0以上であるかチェック
-            if zipfile.is_zipfile(zip_path) and os.path.getsize(zip_path) > 0:
-                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                    # ファイル数を確認して空かどうかを判定
-                    if len(zip_ref.namelist()) > 0:
-                        os.makedirs(output_dir, exist_ok=True)  # 保存先フォルダが存在しない場合に作成
-                        zip_ref.extractall(output_dir)
-                        print(f"Extracted {zip_path} to {output_dir}")
-                    else:
-                        print(f"{zip_path} is an empty zip file.")
-            else:
-                print(f"{zip_path} is not a valid or empty zip file.")
-        except zipfile.BadZipFile:
-            print(f"{zip_path} is corrupted or not a valid zip file.")
+            # 解凍処理
+            zip_path = os.path.join("invest_zemi\ignored_folder", f'{docID}.zip')
+            try:
+                # ZIP形式であり、ファイルサイズが0以上であるかチェック
+                if zipfile.is_zipfile(zip_path) and os.path.getsize(zip_path) > 0:
+                    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                        # ファイル数を確認して空かどうかを判定
+                        if len(zip_ref.namelist()) > 0:
+                            os.makedirs(output_dir, exist_ok=True)  # 保存先フォルダが存在しない場合に作成
+                            zip_ref.extractall(output_dir)
+                            print(f"Extracted {zip_path} to {output_dir}")
+                        else:
+                            print(f"{zip_path} is an empty zip file.")
+                else:
+                    print(f"{zip_path} is not a valid or empty zip file.")
+            except zipfile.BadZipFile:
+                print(f"{zip_path} is corrupted or not a valid zip file.")
 
-        # フォルダ内の'-asr-'が含まれるCSVファイルを検索
-        base_folder_path = r'invest_zemi\ignored_folder'
+            # フォルダ内の'-asr-'が含まれるCSVファイルを検索
+            base_folder_path = r'invest_zemi\ignored_folder'
 
-        # パターンを指定してファイルパスを取得
-        folder_pattern = os.path.join(base_folder_path, '*_extracted', 'XBRL_TO_CSV', '*-asr-*.csv')
-        matching_folders = glob.glob(folder_pattern)
-        file = matching_folders[0]
+            # パターンを指定してファイルパスを取得
+            folder_pattern = os.path.join(base_folder_path, '*_extracted', 'XBRL_TO_CSV', '*-asr-*.csv')
+            matching_folders = glob.glob(folder_pattern)
+            file = matching_folders[0]
 
-        # 見つかったCSVファイルを読み込む
+            # 見つかったCSVファイルを読み込む
 
-        try:
-            return_df = pd.read_csv(file, encoding='utf-16', sep='\t')
-            print(f"Loaded {file} successfully.")
-            # DataFrameの確認や処理が必要であればここに追加
-            # 例: print(df.head())など
-        except Exception as e:
-            print(f"Error loading {file}: {e}")
-        
-        return return_df
+            try:
+                return_df = pd.read_csv(file, encoding='utf-16', sep='\t')
+                print(f"Loaded {file} successfully.")
+                # DataFrameの確認や処理が必要であればここに追加
+                # 例: print(df.head())など
+            except Exception as e:
+                print(f"Error loading {file}: {e}")
+            
+            return return_df
 
     def delete_files():
         extracted_folder = "invest_zemi\ignored_folder"
@@ -234,7 +224,7 @@ def fin_statement(input, output, session):
         for col in cols:
             data = [convert_number(x) for x in df[df['項目名'].str.contains(f'{col}', na=False)][:5]['値'].reset_index(drop=True)]
             data_for_display[col] = data
-        
+            
         return data_for_display
 
     def get_financialstatement(code, api_key):
@@ -304,10 +294,24 @@ def fin_statement(input, output, session):
 
         return path
 
+    with ui.layout_sidebar():
+        with ui.sidebar():
+            ui.input_password("api_key", "API KEY", placeholder="EDINETのAPI KEYを入力してください")
+            ui.input_action_button('start_search', 'ドキュメントの検索開始')
+            ui.input_checkbox_group(
+                "cols", "Data for Display",
+                choices=['売上高','経常利益', '純資産額', '総資産額', 
+                '１株当たり純資産額', '１株当たり配当額', '自己資本比率', 
+                '自己資本利益率', '株価収益率', 
+                '営業活動によるキャッシュ・フロー', '投資活動によるキャッシュ・フロー',
+                '財務活動によるキャッシュ・フロー', '従業員数'],
+                selected=['売上高'],
+                inline=True
+                )
 
-    with ui.card(full_screen=True):
-        
-        @render.image
-        def image2():
-            return {"src": str(figpath2()), 
-                    "width": "800px", "format":"svg"}
+        with ui.card(full_screen=True):
+            
+            @render.image
+            def image2():
+                return {"src": str(figpath2()), 
+                        "width": "800px", "format":"svg"}

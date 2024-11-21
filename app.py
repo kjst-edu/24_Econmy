@@ -10,12 +10,12 @@ from financial_statement_app import fin_statement
 
 
 ui.page_opts(
-    title="Module Demo",  
+    title="アプリ名(未定)",  
     page_fn=partial(page_navbar, id="page"),  
 )
 
-with ui.nav_panel("Panel A"):  
+with ui.nav_panel("Stock Price"): 
     stock_price("main")
 
-with ui.nav_panel("Panel B"):
+with ui.nav_panel("CAPM"):
     fin_statement("main")

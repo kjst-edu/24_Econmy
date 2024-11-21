@@ -46,20 +46,6 @@ def stock_price(input, output, session):
         current_date = dt.today().date()
         return current_date.replace(year=current_date.year-1)
 
-    #サイドバーの表示
-    with ui.sidebar():
-        ui.input_text("ticker", "Enter Stock Code", placeholder="0000")
-        ui.input_date("start", "Start Date", value=last_year(), min='1970-01-01', max=dt.today().date())
-        ui.input_date("end", "End Date", value = dt.today().date(), min='1970-01-01', max=dt.today().date())
-        ui.input_checkbox_group(
-            "moving_average", "Moving Average",
-            choices=[7, 10, 20, 30, 50, 100],
-            selected=[7],
-            inline=True)
-
-
-
-
     @reactive.calc
     def df():
         return get_stock_price(input.ticker(), list(input.moving_average()), input.start(), input.end())
@@ -74,9 +60,8 @@ def stock_price(input, output, session):
             company_name = "取得エラー"
         return company_name
 
-    @render.text
-    def company_name():
-        return f"企業名: {get_company_name()}"   
+       
+
 
     @reactive.calc
     def figpath():
@@ -106,10 +91,25 @@ def stock_price(input, output, session):
 
         return path
 
+    #サイドバーの表示
+    with ui.layout_sidebar(fillable=True):
+        with ui.sidebar(open='desktop'):
+            ui.input_text("ticker", "Enter Stock Code", placeholder="0000")
+            ui.input_date("start", "Start Date", value=last_year(), min='1970-01-01', max=dt.today().date())
+            ui.input_date("end", "End Date", value = dt.today().date(), min='1970-01-01', max=dt.today().date())
+            ui.input_checkbox_group(
+                "moving_average", "Moving Average",
+                choices=[7, 10, 20, 30, 50, 100],
+                selected=[7],
+                inline=True)
 
-    with ui.card(full_screen=True):
-        
-        @render.image
-        def image():
-            return {"src": str(figpath()), 
-                    "width": "500px", "format":"svg"}
+        @render.text
+        def company_name():
+            return f"企業名: {get_company_name()}"
+
+        with ui.card(full_screen=True):
+            
+            @render.image
+            def image():
+                return {"src": str(figpath()), 
+                        "width": "500px", "format":"svg"}
