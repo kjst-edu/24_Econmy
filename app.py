@@ -5,7 +5,7 @@ from shiny import reactive, req
 from shiny.ui import page_navbar
 from shiny.express import input, render, ui
 
-from stock_price_app import stock_price
+from stock_price_app import stock_price, golden_cross
 from financial_statement_app import fin_statement
 from CAPM_app import calc_capm
 
@@ -25,6 +25,9 @@ with ui.nav_panel("財務諸表"):
 
 with ui.nav_panel("CAPM"):
     calc_capm("main")
+
+with ui.nav_panel('ゴールデンクロス・デッドクロス'):
+    golden_cross('main')
 
 with ui.nav_panel('API KEY 最終的に削除'):
     @render.text
