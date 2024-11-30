@@ -250,6 +250,15 @@ def fin_statement(input, output, session):
     def fs_df():
         return make_data_for_display(list(input.cols()), data())
 
+    @reactive.event(input.start_search)
+    def get_company_name():
+        ticker_code = input.ticker() + ".T"
+        try:
+            ticker = yf.Ticker(ticker_code)
+            company_name = ticker.info.get("longName", "企業名が見つかりません")
+        except Exception as e:
+            company_name = "取得エラー"
+        return company_name
 
 
     @reactive.calc
@@ -309,6 +318,10 @@ def fin_statement(input, output, session):
                 inline=True
                 )
 
+        @render.text
+        def company_name3():
+            return f'企業名：{get_company_name()}'
+            
         with ui.card(full_screen=True):
             
             @render.image
