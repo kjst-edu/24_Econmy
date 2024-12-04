@@ -101,12 +101,12 @@ def calc_capm(input, output, session):
     @reactive.effect
     @reactive.event(input.start_button)
     def __():
-        beta.set(get_stock_beta(f'{input.ticker()}.T'))
+        beta.set(get_stock_beta(f'{input.ticker_capm()}.T'))
 
 
     @reactive.event(input.start_button)
     def get_company_name():
-        ticker_code = input.ticker() + ".T"
+        ticker_code = input.ticker_capm() + ".T"
         try:
             ticker = yf.Ticker(ticker_code)
             company_name = ticker.info.get("longName", "企業名が見つかりません")
@@ -167,10 +167,11 @@ def calc_capm(input, output, session):
 
     @reactive.event(input.start_button)
     def calc_risk():
-        return calculate_risk_metrics(input.ticker(), risk_free_rate())
+        return calculate_risk_metrics(input.ticker_capm(), risk_free_rate())
 
     with ui.layout_sidebar():
         with ui.sidebar():
+            ui.input_text('ticker_capm', '株価コード', placeholder='0000')
             ui.input_password("api_key_", "API KEY", placeholder="FRED APIのキーを入力してください")
             ui.input_slider('return_rate', '目標収益率', min=0, max=20, post='%', value=10, step=0.01)
             ui.input_slider('market_risk_premium', 'マーケットリスクプレミアム（一般的には5%）', min=0, max=20, value=5, post='%', step = 0.1)
@@ -190,7 +191,9 @@ def calc_capm(input, output, session):
                 return '株データを取得できませんでした'
             else:
                 return f'期待収益率 : {capm()}%'
-
+        
+        
+        
         @render.text
         def decision():
             if type(capm()) == str:
@@ -203,6 +206,10 @@ def calc_capm(input, output, session):
             def company_name2():
                 return f"{get_company_name()}のリスク"
             
+            @render.text
+            def beta_text():
+                return f'ベータ：{beta()}'
+                
             @render.text
             def daily_text():
                 daily = calc_risk()['daily_metrics']

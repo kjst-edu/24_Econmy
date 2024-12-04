@@ -48,11 +48,27 @@ def stock_price(input, output, session):
     def last_year():
         current_date = dt.today().date()
         return current_date.replace(year=current_date.year-1)
+    
+    def delete_csv():
+        extracted_folder = "invest_zemi/ignored_folder"  # フォルダパスを修正（パス区切りは/推奨）
+        target_filenames = 'stock_data.csv' # 削除対象のCSVファイル名リスト
+
+        if os.path.exists(extracted_folder):
+            file_path = os.path.join(extracted_folder, target_filename)
+                # 削除対象かどうか確認
+            if filename in target_filenames and os.path.isfile(file_path):
+                os.remove(file_path)
+                print(f"Deleted: {file_path}")
+            print("Specified CSV files have been deleted.")
+        else:
+            print(f"{extracted_folder} does not exist.")
 
     df = reactive.value(pd.DataFrame())
     @reactive.effect
     @reactive.event(input.ticker)
     def _():
+        delete_csv()
+        df.to_csv('stock_price_data.csv')
         df.set(get_stock_price(input.ticker(), input.start(), input.end()))
     
 
@@ -118,7 +134,13 @@ def stock_price(input, output, session):
             @render.image
             def image():
                 return {"src": str(figpath()), 
-                        "width": "500px", "format":"svg"}
+                        "width": "700px", "format":"svg"}
+
+        with ui.card(full_screen=True):
+            @render.download(label='データをダウンロード（CSV)')
+            def download_stock_price():
+                path = os.path.join(os.path.dirname("invest_zemi/ignored_folder"), "stock_data.csv")
+                return path
         
 
 
@@ -256,10 +278,4 @@ def golden_cross(input, output, session):
                 return ("データが見つかりませんでした")
             else:
                 return ("通知: ゴールデンクロスもデッドクロスも発生していません")
-
-        with ui.card(full_screen=True):
-            @render.image
-            def image_gc():
-                return {"src": str(figpath_()), 
-                        "width": "500px", "format":"svg"}
 
