@@ -1,6 +1,7 @@
 import yfinance as yf
 import numpy as np
 import pandas as pd
+import japanize_matplotlib
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 
