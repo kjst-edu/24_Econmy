@@ -17,4 +17,3 @@ def extract_num():
 @render.text
 def _():
     return extract_num()
-
