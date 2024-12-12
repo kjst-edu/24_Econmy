@@ -48,12 +48,27 @@ def stock_price(input, output, session):
     def last_year():
         current_date = dt.today().date()
         return current_date.replace(year=current_date.year-1)
+    
+    def delete_csv():
+        extracted_folder = "invest_zemi/ignored_folder"  # フォルダパスを修正（パス区切りは/推奨）
+        target_filename = 'stock_data.csv' # 削除対象のCSVファイル名リスト
+
+        if os.path.exists(extracted_folder):
+            file_path = os.path.join(extracted_folder, target_filename)
+                # 削除対象かどうか確認
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                print(f"Deleted: {file_path}")
+            print("Specified CSV files have been deleted.")
+        else:
+            print(f"{extracted_folder} does not exist.")
 
     df = reactive.value(pd.DataFrame())
     @reactive.effect
-    @reactive.event(input.ticker)
+    @reactive.event(input.start_search_data)
     def _():
         df.set(get_stock_price(input.ticker(), input.start(), input.end()))
+        df().to_csv(r'invest_zemi/ignored_folder/stock_price_data.csv')
     
 
 
@@ -101,6 +116,7 @@ def stock_price(input, output, session):
     #サイドバーの表示
     with ui.layout_sidebar(fillable=True):
         with ui.sidebar(open='desktop'):
+            ui.input_action_button('start_search_data', 'データの検索開始')
             ui.input_text("ticker", "Enter Stock Code", placeholder="0000")
             ui.input_date("start", "Start Date", value=last_year(), min='1970-01-01', max=dt.today().date())
             ui.input_date("end", "End Date", value = dt.today().date(), min='1970-01-01', max=dt.today().date())
@@ -118,7 +134,13 @@ def stock_price(input, output, session):
             @render.image
             def image():
                 return {"src": str(figpath()), 
-                        "width": "500px", "format":"svg"}
+                        "width": "600px", "format":"svg"}
+
+        with ui.card(full_screen=True):
+            @render.download(label='データをダウンロード（CSV)')
+            def download_stock_price():
+                path = r"invest_zemi/ignored_folder/stock_price_data.csv"
+                return path
         
 
 
@@ -256,10 +278,4 @@ def golden_cross(input, output, session):
                 return ("データが見つかりませんでした")
             else:
                 return ("通知: ゴールデンクロスもデッドクロスも発生していません")
-
-        with ui.card(full_screen=True):
-            @render.image
-            def image_gc():
-                return {"src": str(figpath_()), 
-                        "width": "500px", "format":"svg"}
 
