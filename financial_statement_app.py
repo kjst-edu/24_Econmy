@@ -244,6 +244,7 @@ def fin_statement(input, output, session):
     @reactive.event(input.start_search)
     def _():
         data.set(get_financialstatement(input.ticker(), input.api_key()))
+        data().to_csv(r'invest_zemi/ignored_folder/financial_statement_data.csv')
 
 
     @reactive.calc
@@ -328,3 +329,9 @@ def fin_statement(input, output, session):
             def image2():
                 return {"src": str(figpath2()), 
                         "width": "800px", "format":"svg"}
+
+        with ui.card(full_screen=True):
+            @render.download(label='データをダウンロード（CSV)')
+            def download_stock_price():
+                path = r"invest_zemi/ignored_folder/financial_statement_data.csv"
+                return path
