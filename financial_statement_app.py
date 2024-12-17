@@ -332,6 +332,6 @@ def fin_statement(input, output, session):
 
         with ui.card(full_screen=True):
             @render.download(label='データをダウンロード（CSV)')
-            def download_stock_price():
+            def download_financial_statement():
                 path = r"invest_zemi/ignored_folder/financial_statement_data.csv"
                 return path
