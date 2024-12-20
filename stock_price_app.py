@@ -23,6 +23,11 @@ from email.mime.text import MIMEText
 
 
 #株価の表示
+"""
+ここで書いたコードをapp.pyで動かすので@module付けてdef stock_price(input, output, session):
+という関数の中にすべてのコードを入れる必要がある。関数の名前は何でもよいがすでにあるものと同じだとエラーになる
+引数(input, output, session)は変更不可
+"""
 
 @module
 def stock_price(input, output, session):
@@ -44,11 +49,12 @@ def stock_price(input, output, session):
 
         return return_df.set_index('Date')
     
-
+    #入力の一年前の日付を取得
     def last_year():
         current_date = dt.today().date()
         return current_date.replace(year=current_date.year-1)
-    
+
+    #ダウンロードしたデータがたまるので削除
     def delete_csv():
         extracted_folder = "invest_zemi/ignored_folder"  # フォルダパスを修正（パス区切りは/推奨）
         target_filename = 'stock_data.csv' # 削除対象のCSVファイル名リスト
@@ -63,6 +69,7 @@ def stock_price(input, output, session):
         else:
             print(f"{extracted_folder} does not exist.")
 
+    #グラフを作成するためのデータをデータフレーム（df）として保存
     df = reactive.value(pd.DataFrame())
     @reactive.effect
     @reactive.event(input.start_search_data)
@@ -71,7 +78,7 @@ def stock_price(input, output, session):
         df().to_csv(r'invest_zemi/ignored_folder/stock_price_data.csv')
     
 
-
+    #会社名を取得
     def get_company_name():
         ticker_code = input.ticker() + ".T"
         try:
@@ -82,7 +89,7 @@ def stock_price(input, output, session):
         return company_name
     
 
-
+    #グラフ作成
     @reactive.calc
     def figpath():
         import tempfile
@@ -111,31 +118,35 @@ def stock_price(input, output, session):
 
         return path
     
+        #ここより上の部分で表示用のデータを作成したりグラフを作成したりしている。アプリの裏側の部分、下からが表側の部分
 
-
-    #サイドバーの表示
+    #サイドバーの表示（入力や出力（グラフなど）の処理はここで）
     with ui.layout_sidebar(fillable=True):
         with ui.sidebar(open='desktop'):
+            #銘柄コードの入力部分や検索ボタンなどユーザが入力する部分
             ui.input_action_button('start_search_data', 'データの検索開始')
-            ui.input_text("ticker", "Enter Stock Code", placeholder="0000")
-            ui.input_date("start", "Start Date", value=last_year(), min='1970-01-01', max=dt.today().date())
-            ui.input_date("end", "End Date", value = dt.today().date(), min='1970-01-01', max=dt.today().date())
+            ui.input_text("ticker", "Enter Stock Code", placeholder="0000")#株価コード
+            ui.input_date("start", "Start Date", value=last_year(), min='1970-01-01', max=dt.today().date())#日付（開始）
+            ui.input_date("end", "End Date", value = dt.today().date(), min='1970-01-01', max=dt.today().date())#日付（終了）
             ui.input_checkbox_group(
                 "moving_average", "Moving Average",
                 choices=[7, 10, 20, 30, 50, 100],
                 selected=[7],
-                inline=True)
+                inline=True)#移動平均のチェックボックス
 
+        #企業名を表示
         @render.text
         def company_name():
             return f"企業名: {get_company_name()}"
 
+        #株価のグラフの表示
         with ui.card(full_screen=True):
             @render.image
             def image():
                 return {"src": str(figpath()), 
                         "width": "600px", "format":"svg"}
 
+        #CSVのダウンロード
         with ui.card(full_screen=True):
             @render.download(label='データをダウンロード（CSV)')
             def download_stock_price():
