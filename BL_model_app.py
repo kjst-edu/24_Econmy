@@ -3,7 +3,10 @@ from shiny.express import input, ui, module
 import re
 
 ui.input_text_area('a', 'b','aaa')
-
+"""
+何を入力しても数字の部分だけ取り出し4桁ごとに区切ってリスト化
+このファイルを実行すると実験できる
+"""
 def extract_numbers(input_string):
     # 数字のみを抽出
     numeric_string = re.sub(r'\D', '', input_string)
