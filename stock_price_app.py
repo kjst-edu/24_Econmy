@@ -143,7 +143,10 @@ def stock_price(input, output, session):
         with ui.card(full_screen=True):
             @render.image
             def image():
-                return {"src": str(figpath()), 
+                if df().empty or isinstance(df(), str):
+                    return None
+                else:
+                    return {"src": str(figpath()), 
                         "width": "600px", "format":"svg"}
 
         #CSVのダウンロード

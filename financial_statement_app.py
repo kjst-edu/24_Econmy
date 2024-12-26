@@ -243,8 +243,9 @@ def fin_statement(input, output, session):
     @reactive.effect
     @reactive.event(input.start_search)
     def _():
-        data.set(get_financialstatement(input.ticker(), input.api_key()))
-        data().to_csv(r'invest_zemi/ignored_folder/financial_statement_data.csv')
+        data.set(get_financialstatement(input.ticker_code_fs(), input.api_key()))
+        if not isinstance(data(), str) and isinstance(data(), pd.DataFrame) and (not data().empty):
+            data().to_csv(r'invest_zemi/ignored_folder/financial_statement_data.csv')
 
 
     @reactive.calc
@@ -253,7 +254,7 @@ def fin_statement(input, output, session):
 
     @reactive.event(input.start_search)
     def get_company_name():
-        ticker_code = input.ticker() + ".T"
+        ticker_code = input.ticker_code_fs() + ".T"
         try:
             ticker = yf.Ticker(ticker_code)
             company_name = ticker.info.get("longName", "企業名が見つかりません")
@@ -307,6 +308,7 @@ def fin_statement(input, output, session):
     with ui.layout_sidebar():
         with ui.sidebar():
             ui.input_password("api_key", "API KEY", placeholder="EDINETのAPI KEYを入力してください")
+            ui.input_text("ticker_code_fs", "株式コード（四ケタ）", placeholder="0000")
             ui.input_action_button('start_search', 'ドキュメントの検索開始')
             ui.input_checkbox_group(
                 "cols", "Data for Display",
@@ -327,7 +329,10 @@ def fin_statement(input, output, session):
             
             @render.image
             def image2():
-                return {"src": str(figpath2()), 
+                if isinstance(data(), str) or data().empty:
+                    return None
+                else:
+                    return {"src": str(figpath2()), 
                         "width": "800px", "format":"svg"}
 
         with ui.card(full_screen=True):

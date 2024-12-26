@@ -197,7 +197,7 @@ def calc_capm(input, output, session):
         @render.text
         def decision():
             if type(capm()) == str:
-                return f'{capm}'
+                return f'{capm()}'
             else:
                 return f'{investment_decision(capm(), input.return_rate())}'
         
@@ -212,22 +212,37 @@ def calc_capm(input, output, session):
                 
             @render.text
             def daily_text():
-                daily = calc_risk()['daily_metrics']
-                return f"日次 - 平均リターン: {daily[0]:.4f}, 標準偏差: {daily[1]:.4f}, シャープレシオ: {daily[2]:.4f}"
+                if beta() is None or isinstance(capm(), str):
+                    return 'データを取得できませんでした'
+                else:
+                    daily = calc_risk()['daily_metrics']
+                    return f"日次 - 平均リターン: {daily[0]:.4f}, 標準偏差: {daily[1]:.4f}, シャープレシオ: {daily[2]:.4f}"
             @render.text
             def weekly_text():
-                weekly = calc_risk()['weekly_metrics']
-                return f"週次 - 平均リターン: {weekly[0]:.4f}, 標準偏差: {weekly[1]:.4f}, シャープレシオ: {weekly[2]:.4f}"
+                if beta() is None or isinstance(capm(), str):
+                    return 'データを取得できませんでした'
+                else:
+                    weekly = calc_risk()['weekly_metrics']
+                    return f"週次 - 平均リターン: {weekly[0]:.4f}, 標準偏差: {weekly[1]:.4f}, シャープレシオ: {weekly[2]:.4f}"
             @render.text
             def monthly_text():
-                monthly = calc_risk()['monthly_metrics']
-                return f"月次 - 平均リターン: {monthly[0]:.4f}, 標準偏差: {monthly[1]:.4f}, シャープレシオ: {monthly[2]:.4f}"
+                if beta() is None or isinstance(capm(), str):
+                    return 'データを取得できませんでした'
+                else:
+                    monthly = calc_risk()['monthly_metrics']
+                    return f"月次 - 平均リターン: {monthly[0]:.4f}, 標準偏差: {monthly[1]:.4f}, シャープレシオ: {monthly[2]:.4f}"
             @render.text
             def yearly_text():
-                yearly = calc_risk()['yearly_metrics']
-                return f"年次 - 平均リターン: {yearly[0]:.4f}, 標準偏差: {yearly[1]:.4f}, シャープレシオ: {yearly[2]:.4f}"
+                if beta() is None or isinstance(capm(), str):
+                    return 'データを取得できませんでした'
+                else:
+                    yearly = calc_risk()['yearly_metrics']
+                    return f"年次 - 平均リターン: {yearly[0]:.4f}, 標準偏差: {yearly[1]:.4f}, シャープレシオ: {yearly[2]:.4f}"
             @render.text
             def long_text():
-                long = calc_risk()['long_metrics']
-                return f"５年次 - 平均リターン: {long[0]:.4f}, 標準偏差: {long[1]:.4f}, シャープレシオ: {long[2]:.4f}"
+                if beta() is None or isinstance(capm(), str):
+                    return 'データを取得できませんでした'
+                else:
+                    long = calc_risk()['long_metrics']
+                    return f"５年次 - 平均リターン: {long[0]:.4f}, 標準偏差: {long[1]:.4f}, シャープレシオ: {long[2]:.4f}"
 
