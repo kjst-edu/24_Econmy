@@ -27,11 +27,10 @@ def black_litterman(tickers, stock_data, risk_aversion, tau, P, Q, omega, market
     # 日次リターン計算
     returns = stock_data.pct_change().dropna()
     
-    stock = yf.Ticker(ticker)
-
     # 株価の最新データを取得
-    current_price = stock.history(period="1d")["Adj Close"].iloc[-1]
+    current_price = stock_data.iloc[-1]
 
+    stock = yf.Ticker(tickers)
     # 発行済株式数を取得
     shares_outstanding = stock.info["sharesOutstanding"]
 
@@ -58,7 +57,7 @@ def black_litterman(tickers, stock_data, risk_aversion, tau, P, Q, omega, market
     return weights, new_weights, pi, new_return
 
 # 可視化関数
-@reactive.calc
+#@reactive.calc
 def plot_weights_comparison(tickers, weights, new_weights):
     # Create the plot
     plt.figure(figsize=(12, 6))
@@ -101,20 +100,41 @@ def main(tickers, risk_aversion, tau, list_p, list_q, list_omega):
 
     return tickers, pi, new_return
 
+@reactive.event(input.tickers)
+def get_company_names():
+    stocks = []
+    tickers = extract_numbers(input.tickers())
+    for ticker in tickers:
+        stock = yf.Ticker(f'{ticker}.T')
+        name = stock.info.get('longName', '企業名が見つかりません')
+        stocks.append(name)
 
-    with ui.layout_sidebar(fillable=True):
-        with ui.sidebar(open='desktop'):
-            ui.input_text_area("tickers", "株式コードを入力して下さい", placeholder="0000, 1111, 1234 （各コードの区切りの形式に指定なし（スペースでもコンマでも何もなしでも可））")
-            ui.input_slider('risk_aversion', 'リスク回避係数', min=0, max=15, value=2.5, step=0.1)
-            ui.input_slider('tau', '非直感的調整係数', min=0, max=1, value=0.05, step=0.01)
-            ui.input_text_area('p', 'ビュー（株式コードと同じ順番で入力してください）', placeholder='-1, 0, 1のいずれか（強気なら1、弱気なら-1）')
-            ui.input_text_area('q', '期待リターン（株式コードと同じ順番で入力してください、年率、%表記、0以上）', placeholder='例15%→15')
-            ui.input_text_area('omega', 'ビューの不確実性（株式コードと同じ順番で入力してください、0以上、小さいほど信頼性が高いとみなされる）', placeholder='0以上、0.01~0.10が一般的')
+    return stocks
+    
 
 
 
+with ui.layout_sidebar(fillable=True):
+    with ui.sidebar(open='desktop'):
+        ui.input_text_area("tickers", "株式コードを入力して下さい", placeholder="0000, 1111, 1234 （各コードの区切りの形式に指定なし（スペースでもコンマでも何もなしでも可））")
+        ui.input_slider('risk_aversion', 'リスク回避係数', min=0, max=15, value=2.5, step=0.1)
+        ui.input_slider('tau', '非直感的調整係数', min=0, max=1, value=0.05, step=0.01)
+        ui.input_text_area('p', 'ビュー（株式コードと同じ順番で入力してください）', placeholder='-1, 0, 1のいずれか（強気なら1、弱気なら-1）')
+        ui.input_text_area('q', '期待リターン（株式コードと同じ順番で入力してください、年率、%表記、0以上）', placeholder='例15%→15')
+        ui.input_text_area('omega', 'ビューの不確実性（株式コードと同じ順番で入力してください、0以上、小さいほど信頼性が高いとみなされる）', placeholder='0以上、0.01~0.10が一般的')
+
+    with ui.card(full_screen=True):
+        ui.card_header("分析中の企業")
+        @render.text
+        def company_names():
+            if input.tickers() == '':
+                return '銘柄コードを入力してください'
+            else:
+                return ', '.join(get_company_names())#改行したい
+        
 
 
+"""
     # 結果の表示
     print("\n均衡期待リターン:")
     for ticker, ret in zip(tickers, pi):
@@ -136,7 +156,7 @@ Q = np.array([float(input(f"{ticker}の期待リターンを入力（例: 0.15�
     # omega（Viewの不確実性）
 omega = np.diag([float(input(f"{ticker}のViewの不確実性を入力（例: 0.05）: ")) for ticker in tickers])
 
-"""
+
 銘柄コードをカンマ区切りで入力してください（例: 7203,9432,9984）: 7203, 9432, 9984
 リスク回避係数を入力してください（例: 2.5）: 2.5
 非直感的調整係数を入力してください（例: 0.05）: 0.05
