@@ -33,11 +33,10 @@ def black_litterman(stock_data, risk_aversion, tau, P, Q, omega, ticker_objects,
     # 日次リターン計算
     returns = stock_data.astype(float).pct_change().dropna()
     
-    # 株価の最新データを取得
-    current_price = stock_data.iloc[-1]
-
     weights = []
-    for ticker_object in ticker_objects:
+    for i in range(len(ticker_objects)):
+        ticker_object = ticker_objects[i]
+        current_price = stock_data.iloc[-1, i]
         # 発行済株式数を取得
         shares_outstanding = ticker_object.info["sharesOutstanding"]
 
@@ -67,27 +66,8 @@ def black_litterman(stock_data, risk_aversion, tau, P, Q, omega, ticker_objects,
     
     return weights, new_weights, pi, new_return
 
-# 可視化関数
-"""
-@reactive.calc
-def plot_weights_comparison(tickers, weights, new_weights):
-    # Create the plot
-    plt.figure(figsize=(12, 6))
-    plt.bar(range(len(tickers)), weights, alpha=0.5, label='元のウェイト')
-    plt.bar(range(len(tickers)), new_weights, alpha=0.5, label='新しいウェイト')
-    plt.xticks(range(len(tickers)), [t.replace('.T', '') for t in tickers], rotation=45)
-    plt.ylabel('ウェイト')
-    plt.title('ポートフォリオウェイトの比較')
-    plt.legend()
-    plt.tight_layout()
 
-    # Save the plot to a temporary file
-    fd, path = tempfile.mkstemp(suffix='.svg')
-    plt.savefig(path, format='svg')
-    plt.close()  # Close the plot to release resources
 
-    return path
-"""
 
 # メイン関数
 def main(tickers, risk_aversion, tau, p, q, omega, ticker_objects):
@@ -105,19 +85,23 @@ def main(tickers, risk_aversion, tau, p, q, omega, ticker_objects):
     tau = float(tau)
 
     
-    list_p = np.array([float(x) for x in p.split(', ')])
-    list_q = np.array([float(x) for x in q.split(', ')])
     list_omega = np.diag([float(x) for x in omega.split(', ')])
-    # P（投資家のView）
+    list_p = [float(x) for x in p.split(', ')]
+    list_q = np.array([float(x) for x in q.split(', ')])
+
+    P = np.zeros((len(list_p), len(list_p)))
+    for i in range(len(list_p)):
+        P[i, i] = list_p[i]
+            
+    P = np.array(P)
+    P = P.reshape(len(list_q), -1)
+
         
     # ブラックリッターマンモデルの計算
-    weights, new_weights, pi, new_return = black_litterman(stock_data, risk_aversion, tau, list_p, list_q, list_omega, ticker_objects)
+    weights, new_weights, pi, new_return = black_litterman(stock_data, risk_aversion, tau, P, list_q/100, list_omega, ticker_objects)
 
-    return [pi, new_return]
+    return [pi, new_return, weights, new_weights]
     
-
-
-
 
 
 
@@ -148,6 +132,54 @@ def _():
         result = main(input.tickers(), input.risk_aversion(), input.tau(), input.p(), input.q(), input.omega(), company_tickers())
         result_bl.set(result)
 
+
+# 可視化関数
+@reactive.calc
+def figpath_pie():
+    """
+    Creates a pie chart based on portfolio weights.
+    
+    Parameters:
+        weights (np.array): Array of portfolio weights.
+        labels (list or None): List of labels for the assets. If None, default labels will be used.
+        title (str): Title of the pie chart.
+    """
+    import japanize_matplotlib
+    weights = result_bl()[3]
+    labels = [x.info.get('longName', '企業が見つかりません') for x in company_tickers()]
+    # Validate input
+    if not isinstance(weights, (list, np.ndarray)):
+        raise ValueError("weights must be a list or numpy array.")
+    
+    # Normalize weights to ensure they sum to 1 (if necessary)
+    weights = np.maximum(weights, 0)  # Replace negatives with 0
+    if weights.sum() != 1.0:
+        weights = weights / np.sum(weights)
+    
+    # Create default labels if not provided
+    
+    # Create the pie chart
+    plt.figure(figsize=(10, 8))
+    plt.pie(
+        weights,
+        labels=labels,
+        autopct='%1.1f%%',
+        startangle=90,
+        colors=plt.cm.tab20.colors[:len(weights)],
+        textprops={'fontsize': 10}
+    )
+    plt.title('最適ポートフォリオ', fontsize=16, y=1.1)
+    plt.axis('equal')  # Equal aspect ratio ensures the pie chart is circular.
+
+    import tempfile
+    # Save the plot to a temporary file
+    fd, path = tempfile.mkstemp(suffix='.svg')
+    plt.savefig(path, format='svg')
+    plt.close()  # Close the plot to release resources
+
+    return path
+
+
 with ui.layout_sidebar(fillable=True):
     with ui.sidebar(open='desktop'):
         ui.input_text_area("tickers", "株式コードを入力して下さい", value='4902, 7203, 9432, 9984', placeholder="0000, 1111, 1234")
@@ -173,56 +205,44 @@ with ui.layout_sidebar(fillable=True):
         ui.card_header('分析結果')
 
         @render.text
-        def result_text():
+        def result_text1():
             if result_bl() == ['入力エラー']:
                 return '入力エラー'
             else:
-                return f'pi : {result_bl()[0]}'
+                return f'pi : {result_bl()[0][0]}'
 
         @render.text
-        def result_text_():
+        def result_text2():
             if result_bl() == ['入力エラー']:
                 return None
             else:
-                return f'new view : {result_bl()[1]}'
+                return f'new return : {result_bl()[1]}'
+
+        @render.text
+        def result_text3():
+            if result_bl() == ['入力エラー']:
+                return None
+            else:
+                return f'weights : {result_bl()[2]}'
+
+        @render.text
+        def result_text4():
+            if result_bl() == ['入力エラー']:
+                return None
+            else:
+                return f'new weights : {result_bl()[3]}'
+
+    with ui.card(full_screen=True):
+        @render.image
+        def image():
+            if input.tickers() != '' or input.p() != '' or input.q() != '' or input.omega() != '':
+                return {"src": str(figpath_pie()), 
+                    "width": "600px", "format":"svg"}
+            else:
+                return None
       
-        
+#stock_dataをreactive.valueに、入力の数が一致しないとき（銘柄コードとp, qなど）、銘柄コードが4桁でないとき、結果の表示（表形式で）
 
 
-"""
-    # 結果の表示
-    print("\n均衡期待リターン:")
-    for ticker, ret in zip(tickers, pi):
-        print(f"{ticker}: {ret:.4f}")
 
-    print("\n新たな期待リターン:")
-    for ticker, ret in zip(tickers, new_return):
-        print(f"{ticker}: {ret:.4f}")
-
-risk_aversion = float(input("リスク回避係数を入力してください（例: 2.5）: "))
-tau = float(input("非直感的調整係数を入力してください（例: 0.05）: "))
-    
-    # P（投資家のView）
-P = np.array([list(map(int, input(f"{ticker}のViewを入力（例えば、強気なら1, 弱気なら-1）: ").split())) for ticker in tickers])
-    
-    # Q（期待リターン）
-Q = np.array([float(input(f"{ticker}の期待リターンを入力（例: 0.15）: ")) for ticker in tickers])
-    
-    # omega（Viewの不確実性）
-omega = np.diag([float(input(f"{ticker}のViewの不確実性を入力（例: 0.05）: ")) for ticker in tickers])
-
-
-銘柄コードをカンマ区切りで入力してください（例: 7203,9432,9984）: 7203, 9432, 9984
-リスク回避係数を入力してください（例: 2.5）: 2.5
-非直感的調整係数を入力してください（例: 0.05）: 0.05
-7203.TのViewを入力（例えば、強気なら1, 弱気なら-1）: 1
-9432.TのViewを入力（例えば、強気なら1, 弱気なら-1）: -1
-9984.TのViewを入力（例えば、強気なら1, 弱気なら-1）: 0
-7203.Tの期待リターンを入力（例: 0.15）: 0.15
-9432.Tの期待リターンを入力（例: 0.15）: 0.10
-9984.Tの期待リターンを入力（例: 0.15）: 0.12
-7203.TのViewの不確実性を入力（例: 0.05）: 0.05
-9432.TのViewの不確実性を入力（例: 0.05）: 0.05
-9984.TのViewの不確実性を入力（例: 0.05）: 0.05
-"""
 
