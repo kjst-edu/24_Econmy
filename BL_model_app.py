@@ -241,7 +241,7 @@ with ui.layout_sidebar(fillable=True):
             else:
                 return None
       
-#stock_dataをreactive.valueに、入力の数が一致しないとき（銘柄コードとp, qなど）、銘柄コードが4桁でないとき、結果の表示（表形式で）
+#stock_dataをreactive.valueに、入力の数が一致しないとき（銘柄コードとp, qなど）、銘柄コードが4桁でないとき、結果の表示（表形式で）、plotly
 
 
 
