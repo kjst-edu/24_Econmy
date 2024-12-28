@@ -5,7 +5,7 @@ import numpy as np
 import yfinance as yf
 import matplotlib.pyplot as plt
 from datetime import datetime
-
+import pandas as pd
 
 #何を入力しても数字の部分だけ取り出し4桁ごとに区切ってリスト化
 
@@ -19,25 +19,36 @@ def extract_numbers(input_string):
 
 # 銘柄データ取得関数
 def get_stock_data(tickers, start_date, end_date):
-    data = yf.download(tickers, start=start_date, end=end_date)
-    return data['Adj Close']
+    for i in range(len(tickers)):
+        ticker = tickers[i]
+        stock = yf.download(f'{ticker}.T', start=start_date, end=end_date)['Adj Close']
+        if i == 0:
+            stocks = stock
+        else:
+            stocks = pd.concat([stocks, stock], axis=1)
+    return stocks
 
 # ブラックリッターマンモデルの計算関数
-def black_litterman(tickers, stock_data, risk_aversion, tau, P, Q, omega, market_cap=950e12):
+def black_litterman(stock_data, risk_aversion, tau, P, Q, omega, ticker_objects, market_cap=950e12):
     # 日次リターン計算
-    returns = stock_data.pct_change().dropna()
+    returns = stock_data.astype(float).pct_change().dropna()
     
     # 株価の最新データを取得
     current_price = stock_data.iloc[-1]
 
-    stock = yf.Ticker(tickers)
-    # 発行済株式数を取得
-    shares_outstanding = stock.info["sharesOutstanding"]
+    weights = []
+    for ticker_object in ticker_objects:
+        # 発行済株式数を取得
+        shares_outstanding = ticker_object.info["sharesOutstanding"]
 
-    # 時価総額を計算
-    market_cap_camp = current_price * shares_outstanding
+        # 時価総額を計算
+        market_cap_camp = current_price * shares_outstanding
 
-    weights = market_cap_camp / market_cap  # 市場ウェイトの計算
+        weight = market_cap_camp / market_cap  # 市場ウェイトの計算
+
+        weights.append(weight)
+    
+    weights = np.array(weights)
     
     # 相関行列の計算
     correlation_matrix = returns.corr()
@@ -57,7 +68,8 @@ def black_litterman(tickers, stock_data, risk_aversion, tau, P, Q, omega, market
     return weights, new_weights, pi, new_return
 
 # 可視化関数
-#@reactive.calc
+"""
+@reactive.calc
 def plot_weights_comparison(tickers, weights, new_weights):
     # Create the plot
     plt.figure(figsize=(12, 6))
@@ -75,53 +87,76 @@ def plot_weights_comparison(tickers, weights, new_weights):
     plt.close()  # Close the plot to release resources
 
     return path
+"""
 
 # メイン関数
-def main(tickers, risk_aversion, tau, list_p, list_q, list_omega):
+def main(tickers, risk_aversion, tau, p, q, omega, ticker_objects):
     # 日付の設定
     end_date = datetime.now()
     start_date = datetime(2020, 1, 1)
 
+    tickers = extract_numbers(tickers)
+
     # データの取得
     stock_data = get_stock_data(tickers, start_date, end_date)
 
+    print(stock_data.head())
+    risk_aversion = float(risk_aversion)
+    tau = float(tau)
 
+    
+    list_p = np.array([float(x) for x in p.split(', ')])
+    list_q = np.array([float(x) for x in q.split(', ')])
+    list_omega = np.diag([float(x) for x in omega.split(', ')])
     # P（投資家のView）
-    P = np.array(list_p)
-    
-    # Q（期待リターン）
-    Q = np.array(list_q)
-    
-    # omega（Viewの不確実性）
-    omega = np.diag(list_omega)
-
+        
     # ブラックリッターマンモデルの計算
-    weights, new_weights, pi, new_return = black_litterman(tickers, stock_data, risk_aversion, tau, P, Q, omega)
+    weights, new_weights, pi, new_return = black_litterman(stock_data, risk_aversion, tau, list_p, list_q, list_omega, ticker_objects)
 
-    return tickers, pi, new_return
-
-@reactive.event(input.tickers)
-def get_company_names():
-    stocks = []
-    tickers = extract_numbers(input.tickers())
-    for ticker in tickers:
-        stock = yf.Ticker(f'{ticker}.T')
-        name = stock.info.get('longName', '企業名が見つかりません')
-        stocks.append(name)
-
-    return stocks
+    return [pi, new_return]
     
 
 
+
+
+
+
+def get_company_tickers(string):
+    ticker_objects = []
+    tickers = extract_numbers(string)
+    for ticker in tickers:
+        ticker_object = yf.Ticker(f'{ticker}.T')
+        ticker_objects.append(ticker_object)
+    return ticker_objects
+
+
+company_tickers = reactive.value([])
+
+@reactive.effect
+@reactive.event(input.tickers)
+def __():
+    if input.tickers() != '':
+        tickers = get_company_tickers(input.tickers())
+        company_tickers.set(tickers)
+
+result_bl = reactive.value([])
+
+@reactive.effect
+@reactive.event(input.start_calc)
+def _():
+    if input.tickers() != '' or input.p() != '' or input.q() != '' or input.omega() != '':
+        result = main(input.tickers(), input.risk_aversion(), input.tau(), input.p(), input.q(), input.omega(), company_tickers())
+        result_bl.set(result)
 
 with ui.layout_sidebar(fillable=True):
     with ui.sidebar(open='desktop'):
-        ui.input_text_area("tickers", "株式コードを入力して下さい", placeholder="0000, 1111, 1234 （各コードの区切りの形式に指定なし（スペースでもコンマでも何もなしでも可））")
+        ui.input_text_area("tickers", "株式コードを入力して下さい", value='4902, 7203, 9432, 9984', placeholder="0000, 1111, 1234")
         ui.input_slider('risk_aversion', 'リスク回避係数', min=0, max=15, value=2.5, step=0.1)
         ui.input_slider('tau', '非直感的調整係数', min=0, max=1, value=0.05, step=0.01)
-        ui.input_text_area('p', 'ビュー（株式コードと同じ順番で入力してください）', placeholder='-1, 0, 1のいずれか（強気なら1、弱気なら-1）')
-        ui.input_text_area('q', '期待リターン（株式コードと同じ順番で入力してください、年率、%表記、0以上）', placeholder='例15%→15')
-        ui.input_text_area('omega', 'ビューの不確実性（株式コードと同じ順番で入力してください、0以上、小さいほど信頼性が高いとみなされる）', placeholder='0以上、0.01~0.10が一般的')
+        ui.input_text_area('p', 'ビュー（株式コードと同じ順番で入力してください）', value = '-1, 1, 0, 1', placeholder='-1, 0, 1のいずれか（強気なら1、弱気なら-1）')
+        ui.input_text_area('q', '期待リターン（株式コードと同じ順番で入力してください、年率、%表記、0以上）', value = '12, 20, 5, 30', placeholder='例15%→15')
+        ui.input_text_area('omega', 'ビューの不確実性（株式コードと同じ順番で入力してください、0以上、小さいほど信頼性が高いとみなされる）', value = '0.01, 0.05, 0.1, 0.07', placeholder='0以上、0.01~0.10が一般的')
+        ui.input_action_button('start_calc', '計算開始')
 
     with ui.card(full_screen=True):
         ui.card_header("分析中の企業")
@@ -130,7 +165,27 @@ with ui.layout_sidebar(fillable=True):
             if input.tickers() == '':
                 return '銘柄コードを入力してください'
             else:
-                return ', '.join(get_company_names())#改行したい
+                company_names = [x.info.get('longName', '企業が見つかりません') for x in company_tickers()]
+                return ', '.join(company_names)#改行したい
+
+   
+    with ui.card(full_screen=True):
+        ui.card_header('分析結果')
+
+        @render.text
+        def result_text():
+            if result_bl() == ['入力エラー']:
+                return '入力エラー'
+            else:
+                return f'pi : {result_bl()[0]}'
+
+        @render.text
+        def result_text_():
+            if result_bl() == ['入力エラー']:
+                return None
+            else:
+                return f'new view : {result_bl()[1]}'
+      
         
 
 
