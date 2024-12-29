@@ -13,3 +13,31 @@ ui.input_text_area('text', '入力')
 def _():
     a = input.text().split(',')
     return a
+
+#https://shiny.posit.co/py/docs/user-interfaces.html
+from shiny.express import render, ui
+from faicons import icon_svg as icon
+
+with ui.value_box(showcase=icon("piggy-bank")):
+    "Total sales"
+    "$1,000,000"
+
+with ui.value_box(showcase=icon("person")):
+    "Total customers"
+    @render.ui
+    def customers():
+        return f"{1000:,}"
+
+"Hover this icon: "
+
+with ui.tooltip():
+    icon("circle-info")
+    "Tooltip message"
+
+ui.br()
+
+"Click this icon: "
+
+with ui.popover(title="Popover title"):
+    icon("circle-info")
+    "Popover message"
