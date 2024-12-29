@@ -7,13 +7,13 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import pandas as pd
 
-ui.input_text_area('text', '入力')
-
-@render.text
+@render.data_frame
 def _():
-    a = input.text().split(',')
-    return a
+    li = pd.DataFrame(columns = ["a", "b", "c", "d"])
+    return li
 
+
+"""
 #https://shiny.posit.co/py/docs/user-interfaces.html
 from shiny.express import render, ui
 from faicons import icon_svg as icon
@@ -41,3 +41,5 @@ ui.br()
 with ui.popover(title="Popover title"):
     icon("circle-info")
     "Popover message"
+
+"""

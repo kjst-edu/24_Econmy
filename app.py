@@ -8,7 +8,7 @@ from shiny.express import input, render, ui
 from stock_price_app import stock_price, golden_cross
 from financial_statement_app import fin_statement
 from CAPM_app import calc_capm
-
+from BL_model_app import black_litterman_app
 
 
 
@@ -22,6 +22,9 @@ with ui.nav_panel("株価"):
 
 with ui.nav_panel("財務諸表"):
     fin_statement("main")
+
+with ui.nav_panel('ブラックリッターマンモデル'):
+    black_litterman_app("main")
 
 with ui.nav_panel("CAPM"):
     calc_capm("main")
