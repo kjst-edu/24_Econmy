@@ -311,7 +311,7 @@ def fin_statement(input, output, session):
             ui.input_text("ticker_code_fs", "株式コード（四ケタ）", placeholder="0000")
             ui.input_action_button('start_search', 'ドキュメントの検索開始')
             ui.input_checkbox_group(
-                "cols", "Data for Display",
+                "cols", "表示する項目",
                 choices=['売上高','経常利益', '純資産額', '総資産額', 
                 '１株当たり純資産額', '１株当たり配当額', '自己資本比率', 
                 '自己資本利益率', '株価収益率', 

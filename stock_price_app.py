@@ -125,11 +125,11 @@ def stock_price(input, output, session):
         with ui.sidebar(open='desktop'):
             #銘柄コードの入力部分や検索ボタンなどユーザが入力する部分
             ui.input_action_button('start_search_data', 'データの検索開始')
-            ui.input_text("ticker", "Enter Stock Code", placeholder="0000")#株価コード
-            ui.input_date("start", "Start Date", value=last_year(), min='1970-01-01', max=dt.today().date())#日付（開始）
-            ui.input_date("end", "End Date", value = dt.today().date(), min='1970-01-01', max=dt.today().date())#日付（終了）
+            ui.input_text("ticker", "銘柄コードを入力", placeholder="0000")#株価コード
+            ui.input_date("start", "表示開始日", value=last_year(), min='1970-01-01', max=dt.today().date())#日付（開始）
+            ui.input_date("end", "表示終了日", value = dt.today().date(), min='1970-01-01', max=dt.today().date())#日付（終了）
             ui.input_checkbox_group(
-                "moving_average", "Moving Average",
+                "moving_average", "移動平均線",
                 choices=[7, 10, 20, 30, 50, 100],
                 selected=[7],
                 inline=True)#移動平均のチェックボックス
@@ -261,7 +261,7 @@ def golden_cross(input, output, session):
     
     with ui.layout_sidebar(fillable=True):
         with ui.sidebar(open='desktop'):
-            ui.input_text("ticker_gc", "Enter Stock Code", placeholder="0000")
+            ui.input_text("ticker_gc", "銘柄コードを入力", placeholder="0000")
             ui.input_checkbox_group(
                 'gc_dc_li', 'ゴールデンクロス・デッドクロスの検出に使用するデータ（二つ選択）',
                 choices=[7, 10, 20, 30, 50, 100],
@@ -288,7 +288,7 @@ def golden_cross(input, output, session):
                 return ("通知: ゴールデンクロスが発生しました！")
             elif golden_dead_cross() == 'dead_cross':
                 return ("通知: デッドクロスが発生しました！")
-            elif golden_dead_cross() is False:
+            elif not golden_dead_cross():
                 return ("データが見つかりませんでした")
             else:
                 return ("通知: ゴールデンクロスもデッドクロスも発生していません")
