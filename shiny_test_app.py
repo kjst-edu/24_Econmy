@@ -6,12 +6,24 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 from datetime import datetime
 import pandas as pd
+import os
 
 @render.data_frame
 def _():
     li = pd.DataFrame(columns = ["a", "b", "c", "d"])
     return li
 
+ui.input_action_button('a', 'A')
+
+@reactive.event(input.a)
+def make_dir():
+    print('makedir')
+    os.makedirs("invest_zemi\ignored_folder", exist_ok=True)
+    return 'made'
+
+@render.text
+def __():
+    return make_dir()
 
 """
 #https://shiny.posit.co/py/docs/user-interfaces.html

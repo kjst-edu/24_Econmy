@@ -139,6 +139,7 @@ def fin_statement(input, output, session):
             api_key = str(api_key)
             url = f'https://api.edinet-fsa.go.jp/api/v2/documents/{docID}?type=5&Subscription-Key={api_key}'
             try:
+                os.makedirs("invest_zemi\ignored_folder", exist_ok=True)
                     # ZIPファイルのダウンロード
                 with urllib.request.urlopen(url) as res:
                     content = res.read()

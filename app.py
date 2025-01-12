@@ -20,6 +20,9 @@ ui.page_opts(
 with ui.nav_panel("株価"): 
     stock_price("main")
 
+with ui.nav_panel('ゴールデンクロス・デッドクロス'):
+    golden_cross('main')
+    
 with ui.nav_panel("財務諸表"):
     fin_statement("main")
 
@@ -29,8 +32,7 @@ with ui.nav_panel('ブラックリッターマンモデル'):
 with ui.nav_panel("CAPM"):
     calc_capm("main")
 
-with ui.nav_panel('ゴールデンクロス・デッドクロス'):
-    golden_cross('main')
+
 
 with ui.nav_panel('API KEY 最終的に削除'):
     @render.text

@@ -161,24 +161,49 @@ def stock_price(input, output, session):
 @module
 def golden_cross(input, output, session):
 
+    def fetch_stock_data(ticker, start_date, end_date):
+        """
+        株価データを取得する関数
+        - ticker: 銘柄コード (例: "AAPL")
+        - start_date: データ取得開始日 (例: "2023-01-01")
+        - end_date: データ取得終了日 (例: "2023-12-31")
+        """
+        # 銘柄コードのバリデーション
+        if not isinstance(ticker, str) or len(ticker) < 1 or len(ticker) > 10:
+            return pd.DataFrame()
+
+        try:
+            # データ取得
+            data = yf.download(ticker, start=start_date, end=end_date, interval="1h")
+                       
+            # データ取得成功
+            return data
+
+        except Exception as e:
+            # yfinance 内部でのエラーをキャッチ
+            return pd.DataFrame()
+
     def get_stock_price_for_gc(ticker):
         ticker = f'{ticker}.T'
         start_date = dt.today().date()
         start_date_150_days_ago = start_date - timedelta(days=150)
-        return_df = yf.download(ticker, start=start_date_150_days_ago, end=dt.today().date(), interval="1h")
-        return_df = return_df.stack(future_stack=True).reset_index()
+        return_df = fetch_stock_data(ticker, start_date_150_days_ago, dt.today().date())
 
-        return_df['date'] = pd.to_datetime(return_df['Datetime'].dt.date)
-        moving_average = [7, 10, 20, 30, 50, 100]
-        for days in moving_average:
-            return_df.loc[:, f'{days}日間移動平均'] = return_df.apply(
-                lambda row: return_df[
-                    (return_df['date'] <= row['date']) &  # 現在の日付以下
-                    (return_df['date'] > row['date'] - pd.Timedelta(days=days))  # 現在の日付からn日間の範囲
-                ]['Close'].mean(),
-                axis=1
-            )
-        return return_df.set_index('date')
+        if not return_df.empty:
+            return_df = return_df.stack(future_stack=True).reset_index()
+            return_df['date'] = pd.to_datetime(return_df['Datetime'].dt.date)
+            moving_average = [7, 10, 20, 30, 50, 100]
+            for days in moving_average:
+                return_df.loc[:, f'{days}日間移動平均'] = return_df.apply(
+                    lambda row: return_df[
+                        (return_df['date'] <= row['date']) &  # 現在の日付以下
+                        (return_df['date'] > row['date'] - pd.Timedelta(days=days))  # 現在の日付からn日間の範囲
+                    ]['Close'].mean(),
+                    axis=1
+                )
+            return return_df.set_index('date')
+        else:
+            return 'ticker_error'
 
     def get_company_name():
         ticker_code = input.ticker_gc() + ".T"
@@ -192,26 +217,23 @@ def golden_cross(input, output, session):
     @reactive.calc
     def df_for_gc():
         reactive.invalidate_later(60*60)
-        if len(input.ticker_gc()) != 4:
-            return 'ticker_error'
-        else:
-            return get_stock_price_for_gc(input.ticker_gc())
+        return get_stock_price_for_gc(input.ticker_gc())
 
 
         #ゴールデン・デッドクロス
     def check_golden_dead_cross():
         print('check')
-        if len(input.gc_dc_li()) != 2:
-            print('ゴールデンクロス・デッドクロスの検出用のデータを確認してください')
+        if len(list(input.gc_dc_li())) != 2:
+            print(input.gc_dc_li())
+            return False
         else:
             # 過去1年分のデータを取得
             stock_data = df_for_gc()
-            # データが取得できているか確認
-            if isinstance(stock_data, str) and stock_data == 'ticker_error':
-                print(f"{get_company_name()} のデータが見つかりませんでした。")
-                return False
+            print(stock_data)
             
-            else:
+            
+            if isinstance(stock_data, pd.DataFrame):
+                print('stock_data is pd.DataFrame')
                 # 最後の2日間のデータを取得
                 last_two_days = stock_data.tail(2)
 
@@ -229,7 +251,9 @@ def golden_cross(input, output, session):
                 elif dead_cross:
                     return 'dead_cross'
                 else:
-                    'none'
+                    return 'none_cross'
+            else:
+                return stock_data
 
     @reactive.calc
     def golden_dead_cross():
@@ -248,7 +272,8 @@ def golden_cross(input, output, session):
 
 
         #ろうそく足
-        fig, axes = mpf.plot(data_for_display ,returnfig=True,  type='candle', volume=True, addplot=apd)
+        fig, axes = mpf.plot(data_for_display ,returnfig=True,  
+        type='candle', volume=True, addplot=apd, warn_too_much_data=1000000)
 
         axes[0].legend([None] * (len(apd) + 2))
         handles = axes[0].get_legend().legend_handles
@@ -275,21 +300,31 @@ def golden_cross(input, output, session):
                 inline=True)
 
         @render.text
-        @reactive.calc
         def search_text():
             return (f"{get_company_name()} の株価を分析中...")
 
         @render.text
-        @reactive.calc
         def start_sarching():
-            if input.ticker_gc() is None:
-                return input.ticker()
+            if input.ticker_gc() =='':
+                return '銘柄コードを入力してください'
             elif golden_dead_cross() == 'golden_cross':
                 return ("通知: ゴールデンクロスが発生しました！")
             elif golden_dead_cross() == 'dead_cross':
                 return ("通知: デッドクロスが発生しました！")
             elif not golden_dead_cross():
-                return ("データが見つかりませんでした")
-            else:
+                return ("検出に使用するデータは二つです。")
+            elif golden_dead_cross() == 'none_cross':
                 return ("通知: ゴールデンクロスもデッドクロスも発生していません")
+            else:
+                return f'エラーが発生しました。{golden_dead_cross()}'
 
+        with ui.card(full_screen=True):
+            @render.image
+            def image_cross():
+                if (not golden_dead_cross() == 'golden_cross' 
+                and not golden_dead_cross() == 'dead_cross' 
+                and not golden_dead_cross() == 'none_cross' ):
+                    return None
+                else:
+                    return {"src": str(figpath_()), 
+                        "width": "600px", "format":"svg"}
