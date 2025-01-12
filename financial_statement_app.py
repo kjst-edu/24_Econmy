@@ -39,7 +39,7 @@ def fin_statement(input, output, session):
 
     def get_docID(code, date, api_key):
         api_key = str(api_key)
-        if (api_key == "Enter EDINET API code") or (api_key is None):
+        if (api_key == "Enter EDINET API code") or (api_key == ''):
             return 0
         else:
             # APIエンドポイント
@@ -65,25 +65,28 @@ def fin_statement(input, output, session):
                 return None
 
             # ドキュメント情報を抽出
-            documents = data['results']
-            if documents == []:
-                return None
-            
-            # 結果をDataFrameに変換
-            df = pd.DataFrame(documents)
-
-            # 特定のカラムだけを選択
-            df_filtered = df[['docID', 'edinetCode', 'filerName', 'docDescription']]
-
-            # 有価証券報告書のみにフィルタリング
-            df_financial = df_filtered[df_filtered['docDescription'].str.contains('有価証券報告書', na=False)]
-            
-            # EDINETコードを取得してフィルタリング
-            edinet_code = get_edinet_code(code)
-            docID_data = df_financial[df_financial['edinetCode'] == edinet_code]
+            try:
+                documents = data['results']
+                if documents == []:
+                    return None
                 
-            # docIDを返す
-            return docID_data['docID'].values[0]
+                # 結果をDataFrameに変換
+                df = pd.DataFrame(documents)
+
+                # 特定のカラムだけを選択
+                df_filtered = df[['docID', 'edinetCode', 'filerName', 'docDescription']]
+
+                # 有価証券報告書のみにフィルタリング
+                df_financial = df_filtered[df_filtered['docDescription'].str.contains('有価証券報告書', na=False)]
+                
+                # EDINETコードを取得してフィルタリング
+                edinet_code = get_edinet_code(code)
+                docID_data = df_financial[df_financial['edinetCode'] == edinet_code]
+                    
+                # docIDを返す
+                return docID_data['docID'].values[0]
+            except KeyError:
+                return None
 
     def get_nearest_quarter_end(current_date):
         # 現在の月を取得
@@ -91,7 +94,7 @@ def fin_statement(input, output, session):
 
         # 四半期末日を設定
         if month <= 5:
-            return current_date.replace(year=current_date.year - 1, month=12, day=31)
+            return current_date.replace(year=current_date.year - 1, month=6, day=30)
         else:
             return current_date.replace(month=6, day=30)
 
@@ -216,7 +219,7 @@ def fin_statement(input, output, session):
                 return num  # 小数点以下があればfloatのまま
         except ValueError:
             # 数値に変換できない場合はそのまま返す
-            return value
+            return 'none_data'
 
     def make_data_for_display(cols, df):
         years = ['四期前', '三期前', '前々期', '前期', '当期']
@@ -280,7 +283,9 @@ def fin_statement(input, output, session):
         i, j = 0, 0
         if r == 1:
             for col in data.columns:
-                if col != '相対年度':
+                if col in remove_cols:
+                    axes[i].set_title(f'{col}のデータを取得できませんでした。')
+                elif col != '相対年度':
                     sns.lineplot(data=data, x='相対年度', y=col, ax=axes[i])
                     axes[i].set_title(f'{col}')
                     axes[i].set_ylabel('')
@@ -290,6 +295,8 @@ def fin_statement(input, output, session):
 
         else:
             for col in data.columns:
+                if col in remove_cols:
+                    axes[j,i].set_title(f'{col}のデータを取得できませんでした。')
                 if col != '相対年度':
                     sns.lineplot(data=data, x='相対年度', y=col, ax=axes[j, i])
                     axes[j, i].set_title(f'{col}')
